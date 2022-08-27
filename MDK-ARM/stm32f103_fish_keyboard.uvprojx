@@ -1712,12 +1712,47 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>platform</GroupName>
+          <Files>
+            <File>
+              <FileName>tim_delay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\platform\tim_delay.c</FilePath>
+            </File>
+            <File>
+              <FileName>tim_pwm_led_stm32.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\platform\tim_pwm_led_stm32.c</FilePath>
+            </File>
+            <File>
+              <FileName>time_platform.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\platform\time_platform.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>fish_keyboard</GroupName>
           <Files>
             <File>
               <FileName>scan_keyboard.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\fish_keyboard\src\keyboard\scan_keyboard.c</FilePath>
+            </File>
+            <File>
+              <FileName>c_timer_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\base\c_timer_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>tim_pwm_led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\tim_pwm_led\tim_pwm_led.c</FilePath>
+            </File>
+            <File>
+              <FileName>tim_pwm_led_ws2812.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\src\tim_pwm_led\tim_pwm_led_ws2812.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1733,6 +1768,11 @@
               <FileName>cJSON_Utils.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\fish_keyboard\3rd\cjson\cJSON_Utils.c</FilePath>
+            </File>
+            <File>
+              <FileName>color.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\fish_keyboard\3rd\Simple-Color-Conversions\color.c</FilePath>
             </File>
           </Files>
         </Group>

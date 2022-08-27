@@ -28,8 +28,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-uint8_t KeyBoard[8] = {0,0,71,0,0,0,0,0};
-uint8_t KeyBoard01[8] = {0,0,0,0,0,0,0,0};
 extern USBD_HandleTypeDef hUsbDeviceFS;
 /* USER CODE END PTD */
 
@@ -170,13 +168,28 @@ int8_t USBD_HID_OutEvent(uint8_t event_idx, uint8_t state)
   scan_keyboard_set_caps_lock_statue(scan_keyboard_manager, event_idx & USB_HID_CAPS_LOCK_STATE_UP);
   scan_keyboard_set_scroll_lock_statue(scan_keyboard_manager, event_idx & USB_HID_SCROLL_LOCK_STATE_UP);
   /* test */
-  if ((event_idx & USB_HID_SCROLL_LOCK_STATE_UP)) {
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-  } else {
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-  }
+//  if ((event_idx & USB_HID_SCROLL_LOCK_STATE_UP)) {
+//    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+//  } else {
+//    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+//  }
 
   return 0;
+}
+
+
+void scan_keyboard_init_all_lock_statue() {
+  uint8_t KeyBoard[8] = {0,0,71,0,0,0,0,0};
+  uint8_t KeyBoard01[8] = {0,0,0,0,0,0,0,0};
+  
+  USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard,sizeof(KeyBoard));
+  HAL_Delay(15);
+  USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard01,sizeof(KeyBoard01));
+  HAL_Delay(15);
+  USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard,sizeof(KeyBoard));
+  HAL_Delay(15);
+  USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard01,sizeof(KeyBoard01));
+  HAL_Delay(15);
 }
 
 /* USER CODE END 0 */
@@ -212,6 +225,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 	scan_keyboard_manager = scan_keyboard_create(NULL, physical_keyboard_get_scan_keys);
+  scan_keyboard_init_all_lock_statue();
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
@@ -225,29 +239,10 @@ int main(void)
 //		set_line_semaphore(1);
 //    HAL_Delay(1000);
     
-//		scan_keyboard_get_usb_keyboard_code(scan_keyboard_manager, keyboard);
-//    USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&keyboard,sizeof(keyboard));
-//		HAL_Delay(10);
-		
-		
-//		if(KeyBoard[2] >= 29)
-//    {
-//      KeyBoard[2] = 4;
-//    }
-//    else
-//    {
-//      KeyBoard[2]++;
-//    }
-    //HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-//    USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard01,sizeof(KeyBoard01));
-//    HAL_Delay(15);
-//    //USBD_HID_GetReport(&hUsbDeviceFS, &keyboard_rx, 1);
-//    
-//    //HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, keyboard_rx == 0x05 ? GPIO_PIN_RESET : GPIO_PIN_SET);
-//    USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard,sizeof(KeyBoard));
-//    HAL_Delay(15);
-//    USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&KeyBoard01,sizeof(KeyBoard));
-    HAL_Delay(1000);
+		scan_keyboard_get_usb_keyboard_code(scan_keyboard_manager, keyboard);
+    USBD_HID_SendReport(&hUsbDeviceFS,(uint8_t*)&keyboard,sizeof(keyboard));
+		HAL_Delay(10);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
