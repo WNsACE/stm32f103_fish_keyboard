@@ -46,6 +46,8 @@ scan_keyboard_t* scan_keyboard_manager;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ ADC_HandleTypeDef hadc1;
+
 TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_tim2_ch2_ch4;
 
@@ -58,6 +60,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -193,6 +196,16 @@ void scan_keyboard_init_all_lock_statue() {
   HAL_Delay(15);
 }
 
+//void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+//{
+//  float ADC_ConvertedValue = HAL_ADC_GetValue(hadc) * 3.3f / 4095.0f;
+//  if (ADC_ConvertedValue > 2.0f) {
+//    ADC_ConvertedValue = 3.0f;
+//  } else {
+//    ADC_ConvertedValue = 0.0f;
+//  }
+//}
+
 /* USER CODE END 0 */
 
 /**
@@ -226,7 +239,12 @@ int main(void)
   MX_DMA_Init();
   MX_USB_DEVICE_Init();
   MX_TIM2_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_ADCEx_Calibration_Start(&hadc1);
+  //HAL_ADC_Start_IT(&hadc1);
+  HAL_ADC_Start(&hadc1);
+  
   timer_manager = c_timer_manager_init();
   tim_pwm_led = tim_pwm_led_stm32_init(TIM_PWM_LED_TYPE_WS2812_GRB, &htim2, TIM_CHANNEL_2);
 //  tim_pwm_led_stm32_set_static_color(tim_pwm_led, 0xff, 0x0, 0x0);
@@ -243,10 +261,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    float ADC_ConvertedValue = 0.0f;
 		uint8_t keyboard[8] = {0};
     
-    c_timer_manager_dispatch_one(timer_manager);
+    HAL_ADC_PollForConversion(&hadc1, 1);
+    ADC_ConvertedValue = HAL_ADC_GetValue(&hadc1) * 3.3f / 4095.0f;
     
+    c_timer_manager_dispatch_one(timer_manager);
 		scan_keyboard_get_usb_keyboard_code(scan_keyboard_manager, keyboard);
     USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&keyboard, sizeof(keyboard));
 		HAL_Delay(10);
@@ -306,12 +327,60 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
   PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
