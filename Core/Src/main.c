@@ -51,6 +51,10 @@ scan_keyboard_t* scan_keyboard_manager;
 TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_tim2_ch2_ch4;
 
+UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart1_tx;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -61,6 +65,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -172,10 +177,27 @@ int8_t USBD_HID_OutEvent(uint8_t event_idx, uint8_t state)
   scan_keyboard_set_caps_lock_statue(scan_keyboard_manager, event_idx & USB_HID_CAPS_LOCK_STATE_UP);
   scan_keyboard_set_scroll_lock_statue(scan_keyboard_manager, event_idx & USB_HID_SCROLL_LOCK_STATE_UP);
   /* test */
-  if ((event_idx & USB_HID_NUM_LOCK_STATE_UP)) {
+	if ((event_idx & USB_HID_NUM_LOCK_STATE_UP)) {
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
   } else {
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+  }
+  if ((event_idx & USB_HID_NUM_LOCK_STATE_UP)) {
+    HAL_GPIO_WritePin(NUM_LOCK_LED_GPIO_Port, NUM_LOCK_LED_Pin, GPIO_PIN_RESET);
+  } else {
+    HAL_GPIO_WritePin(NUM_LOCK_LED_GPIO_Port, NUM_LOCK_LED_Pin, GPIO_PIN_SET);
+  }
+	
+	if ((event_idx & USB_HID_CAPS_LOCK_STATE_UP)) {
+    HAL_GPIO_WritePin(CAPS_LOCK_LED_GPIO_Port, CAPS_LOCK_LED_Pin, GPIO_PIN_RESET);		
+  } else {
+    HAL_GPIO_WritePin(CAPS_LOCK_LED_GPIO_Port, CAPS_LOCK_LED_Pin, GPIO_PIN_SET);
+  }
+	
+	if ((event_idx & USB_HID_SCROLL_LOCK_STATE_UP)) {
+    HAL_GPIO_WritePin(SCROLL_LOCK_LED_GPIO_Port, SCROLL_LOCK_LED_Pin, GPIO_PIN_RESET);
+  } else {
+    HAL_GPIO_WritePin(SCROLL_LOCK_LED_GPIO_Port, SCROLL_LOCK_LED_Pin, GPIO_PIN_SET);
   }
 
   return 0;
@@ -240,6 +262,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_TIM2_Init();
   MX_ADC1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADCEx_Calibration_Start(&hadc1);
   //HAL_ADC_Start_IT(&hadc1);
@@ -247,10 +270,10 @@ int main(void)
   
   timer_manager = c_timer_manager_init();
   tim_pwm_led = tim_pwm_led_stm32_init(TIM_PWM_LED_TYPE_WS2812_GRB, &htim2, TIM_CHANNEL_2);
-//  tim_pwm_led_stm32_set_static_color(tim_pwm_led, 0xff, 0x0, 0x0);
-  tim_pwm_led_stm32_set_round_hsv_color_model(tim_pwm_led, 1000 * 100);
+  tim_pwm_led_stm32_set_static_color(tim_pwm_led, 0x00, 0x00, 0xff);
+  tim_pwm_led_stm32_set_round_hsv_color_model(tim_pwm_led, 1000 * 10);
 //  tim_pwm_led_stm32_set_breathing_color(tim_pwm_led, 1000);
-  tim_pwm_led_stm32_set_curr_color(tim_pwm_led, 0xff, 0x0, 0x0);
+//  tim_pwm_led_stm32_set_curr_color(tim_pwm_led, 0xff, 0x0, 0x0);
 	scan_keyboard_manager = scan_keyboard_create(NULL, physical_keyboard_get_scan_keys);
   scan_keyboard_init_all_lock_statue();
   
@@ -263,9 +286,14 @@ int main(void)
   {
     float ADC_ConvertedValue = 0.0f;
 		uint8_t keyboard[8] = {0};
+    char rx_buffer[100]={0};
     
-    HAL_ADC_PollForConversion(&hadc1, 1);
-    ADC_ConvertedValue = HAL_ADC_GetValue(&hadc1) * 3.3f / 4095.0f;
+    HAL_ADC_PollForConversion(&hadc1, 50);
+		if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc1), HAL_ADC_STATE_REG_EOC)) {
+			ADC_ConvertedValue = HAL_ADC_GetValue(&hadc1) * 3.3f / 4095.0f;
+			sprintf(rx_buffer, "curr:%f ma\r\n", ADC_ConvertedValue * 1000 * 10 / 20);
+			HAL_UART_Transmit_DMA(&huart1, (void*)rx_buffer, sizeof(rx_buffer));
+		}
     
     c_timer_manager_dispatch_one(timer_manager);
 		scan_keyboard_get_usb_keyboard_code(scan_keyboard_manager, keyboard);
@@ -443,6 +471,39 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -452,6 +513,12 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
   /* DMA1_Channel7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
@@ -468,6 +535,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -476,14 +544,19 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, SL_Pin|CLK_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, CAPS_LOCK_LED_Pin|SCORLL_LOCK_LED_Pin|NUM_LOCK_LED_Pin|LED_Pin
-                          |CS_LINE_KEY_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(CS_LINE_KEY_GPIO_Port, CS_LINE_KEY_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LINE_KEY0_Pin|LINE_KEY1_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LINE_KEY2_GPIO_Port, LINE_KEY2_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SL_Pin CLK_Pin LINE_KEY2_Pin */
   GPIO_InitStruct.Pin = SL_Pin|CLK_Pin|LINE_KEY2_Pin;
@@ -498,21 +571,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(DAT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CAPS_LOCK_LED_Pin SCORLL_LOCK_LED_Pin NUM_LOCK_LED_Pin CS_LINE_KEY_Pin
-                           LINE_KEY0_Pin LINE_KEY1_Pin */
-  GPIO_InitStruct.Pin = CAPS_LOCK_LED_Pin|SCORLL_LOCK_LED_Pin|NUM_LOCK_LED_Pin|CS_LINE_KEY_Pin
-                          |LINE_KEY0_Pin|LINE_KEY1_Pin;
+  /*Configure GPIO pins : CAPS_LOCK_LED_Pin SCROLL_LOCK_LED_Pin NUM_LOCK_LED_Pin */
+  GPIO_InitStruct.Pin = CAPS_LOCK_LED_Pin|SCROLL_LOCK_LED_Pin|NUM_LOCK_LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : CS_LINE_KEY_Pin LINE_KEY0_Pin LINE_KEY1_Pin */
+  GPIO_InitStruct.Pin = CS_LINE_KEY_Pin|LINE_KEY0_Pin|LINE_KEY1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : LED_Pin */
-  GPIO_InitStruct.Pin = LED_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
 }
 
